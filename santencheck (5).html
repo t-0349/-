@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>資材3点照合アプリ</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Meiryo',sans-serif;background:#f0f4f8;min-height:100vh;padding:10px}
+.screen{background:#fff;border-radius:14px;box-shadow:0 2px 16px rgba(0,0,0,0.10);max-width:420px;margin:0 auto;overflow:hidden}
+.topbar{background:#185FA5;padding:14px 16px 11px}
+.topbar h1{font-size:17px;font-weight:600;color:#fff}
+.topbar p{font-size:11px;color:rgba(255,255,255,0.85);margin-top:2px}
+.sec{padding:14px 16px;border-bottom:1px solid #eee}
+.sec-label{font-size:11px;color:#888;font-weight:600;letter-spacing:.5px;margin-bottom:10px}
+.step{display:inline-block;background:#185FA5;color:#fff;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;margin-right:5px}
+.file-label{display:block;background:#185FA5;color:#fff;text-align:center;padding:14px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;line-height:1.5}
+.file-label:active{background:#0d4a82}
+.file-label small{display:block;font-size:11px;font-weight:400;opacity:.85;margin-top:3px}
+#file-input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.loaded-ok{background:#e8f5e9;border-radius:8px;padding:10px 12px;margin-top:10px;font-size:13px;color:#2e7d32;font-weight:500;border:1px solid #4caf50}
+.order-card{background:#f5f8ff;border-radius:10px;padding:12px;margin-top:10px;border:1px solid #dce8f8}
+.orow{display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;border-bottom:1px solid #e8eef8}
+.orow:last-child{border-bottom:none}
+.ok{font-size:12px;color:#666;flex-shrink:0;margin-right:8px;padding-top:1px}
+.ov{font-size:13px;font-weight:600;color:#222;text-align:right}
+select{width:100%;font-size:15px;padding:10px 12px;border-radius:8px;border:1.5px solid #ddd;background:#fff;color:#222;-webkit-appearance:none;appearance:none}
+select:focus{outline:none;border-color:#185FA5}
+.hint{background:#FFF8E1;border-radius:8px;padding:10px 12px;margin-bottom:12px;border:1px solid #FFD54F}
+.hint p{font-size:12px;color:#5D4037;line-height:1.6}
+.hint strong{color:#E65100}
+.input-block{margin-bottom:14px}
+.input-lbl{font-size:13px;color:#444;margin-bottom:6px;font-weight:500;display:flex;align-items:center;gap:6px}
+.input-lbl .badge{font-size:10px;background:#E3F2FD;color:#185FA5;padding:2px 7px;border-radius:10px;font-weight:500}
+input[type=text],input[type=number]{width:100%;font-size:18px;padding:13px 14px;border-radius:10px;border:2px solid #ddd;background:#fff;color:#222;-webkit-appearance:none;appearance:none;transition:border-color .2s}
+input[type=text]:focus,input[type=number]:focus{outline:none;border-color:#185FA5;background:#f5f8ff}
+input.ok-input{border-color:#4caf50;background:#f0faf0}
+input.ng-input{border-color:#e53935;background:#fff5f5}
+.paste-hint{font-size:11px;color:#888;margin-top:4px;text-align:right}
+.check-btn{width:100%;padding:14px;background:#185FA5;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;letter-spacing:.5px;-webkit-appearance:none}
+.check-btn:active{background:#0d4a82}
+.save-btn{width:100%;padding:14px;background:#2e7d32;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;margin-top:10px;-webkit-appearance:none;display:flex;align-items:center;justify-content:center;gap:8px}
+.save-btn:active{background:#1b5e20}
+.reset-btn{width:100%;padding:12px;background:#fff;color:#666;border:1.5px solid #ddd;border-radius:10px;font-size:14px;cursor:pointer;margin-top:10px;-webkit-appearance:none}
+.rcard{border-radius:10px;padding:12px 14px;margin-bottom:8px;border:1.5px solid}
+.rok{background:#f0faf0;border-color:#4caf50}
+.rng{background:#fff5f5;border-color:#e53935}
+.rtitle{font-size:14px;font-weight:600;margin-bottom:3px}
+.rtitle.ok{color:#2e7d32}
+.rtitle.ng{color:#c62828}
+.rdetail{font-size:12px;color:#666}
+.final-ok{background:#e8f5e9;border-radius:12px;padding:18px;text-align:center;border:2px solid #4caf50;margin-top:6px}
+.final-ng{background:#ffebee;border-radius:12px;padding:18px;text-align:center;border:2px solid #e53935;margin-top:6px}
+.ft{font-size:19px;font-weight:700;margin-top:6px}
+.fs{font-size:13px;margin-top:5px}
+.ok-c{color:#2e7d32}.ng-c{color:#c62828}
+.ok-s{color:#388e3c}.ng-s{color:#c62828}
+.saved-msg{background:#e8f5e9;border-radius:8px;padding:10px 12px;margin-top:10px;font-size:13px;color:#2e7d32;font-weight:500;border:1px solid #4caf50;text-align:center;display:none}
+/* 記録件数バッジ */
+.rec-badge{display:inline-block;background:#fff3;color:#fff;font-size:11px;padding:2px 8px;border-radius:20px;margin-left:8px;border:1px solid rgba(255,255,255,0.4)}
+.hidden{display:none}
+.note{font-size:11px;color:#999;text-align:center;padding:10px 16px 14px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="screen">
+  <div class="topbar">
+    <h1>📋 資材3点照合アプリ<span class="rec-badge" id="rec-count">記録 0件</span></h1>
+    <p>注文書 ・ 現物ラベル ・ 納品書</p>
+  </div>
+
+  <div class="sec">
+    <div class="sec-label">📂 注文書ファイルを読み込む</div>
+    <label class="file-label" for="file-input">
+      ここをタップしてExcelを選ぶ
+      <small>基幹から出力した注文書（.xlsx）を選択</small>
+    </label>
+    <input type="file" id="file-input" accept=".xlsx,.xls" onchange="loadFile(this)">
+    <div id="loaded-info" class="loaded-ok hidden"></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-label"><span class="step">STEP 1</span>注文書を選ぶ</div>
+    <select id="sel" onchange="onSelect()">
+      <option value="">― ファイルを読み込むと表示されます ―</option>
+    </select>
+    <div id="ocard" class="order-card hidden">
+      <div class="orow"><span class="ok">注文書No.</span><span class="ov" id="o-no"></span></div>
+      <div class="orow"><span class="ok">資材コード</span><span class="ov" id="o-code"></span></div>
+      <div class="orow"><span class="ok">資材名</span><span class="ov" id="o-name" style="font-size:12px"></span></div>
+      <div class="orow"><span class="ok">注文数量</span><span class="ov" id="o-qty" style="color:#185FA5;font-size:15px"></span></div>
+    </div>
+  </div>
+
+  <div class="sec hidden" id="step2-sec">
+    <div class="sec-label"><span class="step">STEP 2</span>現物ラベルを確認</div>
+    <div class="hint">
+      <p>📷 <strong>iPhoneカメラで文字を読み取る方法</strong><br>
+      カメラをラベルにかざす → 文字をタップ長押し → コピー → 下の欄に貼り付け</p>
+    </div>
+    <div class="input-block">
+      <div class="input-lbl">🏷 資材コード<span class="badge">コピペOK</span></div>
+      <input type="text" id="lcode" placeholder="カメラで読取 → 貼り付け"
+        oninput="onInput('lcode')" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <div class="paste-hint">長押しで「ペースト」をタップ</div>
+    </div>
+    <div class="input-block">
+      <div class="input-lbl">🏷 数量<span class="badge">コピペOK</span></div>
+      <input type="number" id="lqty" placeholder="カメラで読取 → 貼り付け"
+        oninput="onInput('lqty')" inputmode="numeric">
+    </div>
+  </div>
+
+  <div class="sec hidden" id="step3-sec">
+    <div class="sec-label"><span class="step">STEP 3</span>納品書を確認</div>
+    <div class="hint">
+      <p>📄 <strong>納品書も同じ手順でOK</strong><br>
+      カメラで読み取ってコピペするだけです</p>
+    </div>
+    <div class="input-block">
+      <div class="input-lbl">📄 資材コード<span class="badge">コピペOK</span></div>
+      <input type="text" id="dcode" placeholder="カメラで読取 → 貼り付け"
+        oninput="onInput('dcode')" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <div class="paste-hint">長押しで「ペースト」をタップ</div>
+    </div>
+    <div class="input-block">
+      <div class="input-lbl">📄 数量<span class="badge">コピペOK</span></div>
+      <input type="number" id="dqty" placeholder="カメラで読取 → 貼り付け"
+        oninput="onInput('dqty')" inputmode="numeric">
+    </div>
+    <button class="check-btn" onclick="doCheck()">✅ 照合する</button>
+  </div>
+
+  <div class="sec hidden" id="res-sec">
+    <div class="sec-label">照合結果</div>
+    <div class="rcard" id="r1"><div class="rtitle" id="rt1"></div><div class="rdetail" id="rd1"></div></div>
+    <div class="rcard" id="r2"><div class="rtitle" id="rt2"></div><div class="rdetail" id="rd2"></div></div>
+    <div class="rcard" id="r3"><div class="rtitle" id="rt3"></div><div class="rdetail" id="rd3"></div></div>
+    <div class="rcard" id="r4"><div class="rtitle" id="rt4"></div><div class="rdetail" id="rd4"></div></div>
+    <div id="final"></div>
+    <button class="save-btn" onclick="saveRecord()">💾 記録を保存する</button>
+    <div class="saved-msg" id="saved-msg">✅ 記録しました！</div>
+    <button class="check-btn" onclick="downloadCSV()" style="background:#1565C0;margin-top:10px">📥 CSVをダウンロード</button>
+    <button class="reset-btn" onclick="resetAll()">🔄 次の照合へ</button>
+  </div>
+
+  <div class="note">
+    記録はこの画面を閉じるまで保持されます<br>
+    CSVをダウンロードしてExcelで開けます
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+let orders=[], cur=null;
+let records=[]; // 照合記録を蓄積
+
+function loadFile(input){
+  const file=input.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const data=new Uint8Array(e.target.result);
+      const wb=XLSX.read(data,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      orders=[];
+      rows.forEach((row,i)=>{
+        if(i===0) return;
+        const a=String(row[0]||'').trim();
+        const b=String(row[1]||'').trim();
+        const iv=String(row[8]||'').trim();
+        const p=String(row[15]||'').trim();
+        if(!a||a.includes('総合計')||a==='品目名称') return;
+        const qty=parseInt(iv.replace(/,/g,'').replace(/\.0+$/,''))||0;
+        if(b&&qty>0) orders.push({no:a,code:b,name:p,qty:qty});
+      });
+      if(orders.length===0){alert('注文データが見つかりませんでした');return;}
+      const sel=document.getElementById('sel');
+      sel.innerHTML='<option value="">― 注文書番号を選択してください ―</option>';
+      orders.forEach((o,i)=>{
+        const opt=document.createElement('option');
+        opt.value=i;
+        opt.textContent=o.no+'　'+o.code+'　'+o.name.slice(0,12)+(o.name.length>12?'…':'');
+        sel.appendChild(opt);
+      });
+      document.getElementById('loaded-info').textContent='✅ '+file.name+'　'+orders.length+'件 読み込み完了';
+      document.getElementById('loaded-info').classList.remove('hidden');
+      cur=null; sel.value='';
+      document.getElementById('ocard').classList.add('hidden');
+      ['step2-sec','step3-sec','res-sec'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+    }catch(err){alert('読み込みエラー：'+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function onSelect(){
+  const v=document.getElementById('sel').value;
+  document.getElementById('ocard').classList.add('hidden');
+  ['step2-sec','step3-sec','res-sec'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+  if(v===''){cur=null;return;}
+  cur=orders[parseInt(v)];
+  document.getElementById('o-no').textContent=cur.no;
+  document.getElementById('o-code').textContent=cur.code;
+  document.getElementById('o-name').textContent=cur.name;
+  document.getElementById('o-qty').textContent=cur.qty.toLocaleString()+' 個';
+  document.getElementById('ocard').classList.remove('hidden');
+  document.getElementById('step2-sec').classList.remove('hidden');
+  document.getElementById('step3-sec').classList.remove('hidden');
+  ['lcode','lqty','dcode','dqty'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.value=''; el.className='';
+  });
+  document.getElementById('res-sec').classList.add('hidden');
+  document.getElementById('saved-msg').style.display='none';
+}
+
+function onInput(id){
+  const el=document.getElementById(id);
+  if(el.type==='text'){
+    const v=el.value.replace(/[\s\u3000]/g,'');
+    if(el.value!==v) el.value=v;
+  }
+  document.getElementById('res-sec').classList.add('hidden');
+}
+
+function setCard(id,rtId,rdId,ok,label,detail){
+  document.getElementById(id).className='rcard '+(ok?'rok':'rng');
+  const rt=document.getElementById(rtId);
+  rt.className='rtitle '+(ok?'ok':'ng');
+  rt.textContent=(ok?'✅ ':'❌ ')+label;
+  document.getElementById(rdId).textContent=detail;
+}
+
+// 現在の照合データを保持
+let currentRecord = null;
+
+function doCheck(){
+  if(!cur) return;
+  const lc=document.getElementById('lcode').value.trim();
+  const lq=parseInt(document.getElementById('lqty').value)||0;
+  const dc=document.getElementById('dcode').value.trim();
+  const dq=parseInt(document.getElementById('dqty').value)||0;
+
+  const c1=lc===cur.code;
+  const c2=dc===cur.code;
+  const c3=lq===cur.qty;
+  const c4=dq===cur.qty;
+
+  document.getElementById('lcode').className=c1?'ok-input':'ng-input';
+  document.getElementById('lqty').className=c3?'ok-input':'ng-input';
+  document.getElementById('dcode').className=c2?'ok-input':'ng-input';
+  document.getElementById('dqty').className=c4?'ok-input':'ng-input';
+
+  setCard('r1','rt1','rd1',c1,'資材コード（注文書 ↔ 現物）',
+    c1?'一致：'+cur.code:'注文書: '+cur.code+'　現物: '+(lc||'未入力'));
+  setCard('r2','rt2','rd2',c2,'資材コード（注文書 ↔ 納品書）',
+    c2?'一致：'+cur.code:'注文書: '+cur.code+'　納品書: '+(dc||'未入力'));
+  setCard('r3','rt3','rd3',c3,'数量（注文書 ↔ 現物）',
+    c3?'一致：'+cur.qty.toLocaleString()+'個':'注文書: '+cur.qty.toLocaleString()+'　現物: '+lq.toLocaleString());
+  setCard('r4','rt4','rd4',c4,'数量（注文書 ↔ 納品書）',
+    c4?'一致：'+cur.qty.toLocaleString()+'個':'注文書: '+cur.qty.toLocaleString()+'　納品書: '+dq.toLocaleString());
+
+  const allOk=c1&&c2&&c3&&c4;
+  const mismatches=[];
+  if(!c1) mismatches.push('資材コード不一致（現物）');
+  if(!c2) mismatches.push('資材コード不一致（納品書）');
+  if(!c3) mismatches.push('数量不一致（現物）');
+  if(!c4) mismatches.push('数量不一致（納品書）');
+
+  // 現在の記録を保持
+  const now=new Date();
+  currentRecord={
+    datetime: now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0'),
+    order_no: cur.no,
+    material_code: cur.code,
+    material_name: cur.name,
+    order_qty: cur.qty,
+    result: allOk?'OK':'NG',
+    mismatch: mismatches.join('／')||'なし'
+  };
+
+  document.getElementById('final').innerHTML=allOk
+    ?'<div class="final-ok"><div style="font-size:32px">✅</div><div class="ft ok-c">3点照合　OK</div><div class="fs ok-s">すべて一致しました</div></div>'
+    :'<div class="final-ng"><div style="font-size:32px">⚠️</div><div class="ft ng-c">不一致あり　要確認</div><div class="fs ng-s">赤い項目を担当者へ報告してください</div></div>';
+
+  document.getElementById('saved-msg').style.display='none';
+  document.getElementById('res-sec').classList.remove('hidden');
+  document.getElementById('res-sec').scrollIntoView({behavior:'smooth'});
+}
+
+// 記録を保存（メモリに追加）
+function saveRecord(){
+  if(!currentRecord) return;
+  records.push({...currentRecord});
+  updateBadge();
+  const msg=document.getElementById('saved-msg');
+  msg.textContent='✅ 記録しました！（合計 '+records.length+' 件）';
+  msg.style.display='block';
+}
+
+// バッジ更新
+function updateBadge(){
+  document.getElementById('rec-count').textContent='記録 '+records.length+'件';
+}
+
+// CSVダウンロード
+function downloadCSV(){
+  if(records.length===0){
+    alert('まだ記録がありません。\n照合後に「記録を保存する」を押してください。');
+    return;
+  }
+  const header=['記録日時','注文書No.','資材コード','資材名','注文数量','結果','不一致内容'];
+  const rows=records.map(r=>[
+    r.datetime, r.order_no, r.material_code, r.material_name,
+    r.order_qty, r.result, r.mismatch
+  ]);
+
+  // BOM付きCSV（Excelで文字化けしない）
+  let csv='\uFEFF'+header.join(',')+'\n';
+  rows.forEach(row=>{
+    csv+=row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')+'\n';
+  });
+
+  const now=new Date();
+  const filename='照合記録_'+now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'.csv';
+
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function resetAll(){
+  document.getElementById('sel').value='';
+  cur=null; currentRecord=null;
+  document.getElementById('ocard').classList.add('hidden');
+  ['step2-sec','step3-sec','res-sec'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+  document.getElementById('saved-msg').style.display='none';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+</body>
+</html>
