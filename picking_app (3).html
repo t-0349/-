@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>資材ピッキングアプリ</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Meiryo',sans-serif;background:#f0f4f8;min-height:100vh;padding:10px}
+.screen{background:#fff;border-radius:14px;box-shadow:0 2px 16px rgba(0,0,0,0.10);max-width:420px;margin:0 auto;overflow:hidden}
+
+/* トップバー */
+.topbar{background:#1a5c3a;padding:14px 16px 11px}
+.topbar h1{font-size:17px;font-weight:600;color:#fff}
+.topbar p{font-size:11px;color:rgba(255,255,255,0.85);margin-top:2px}
+.rec-badge{display:inline-block;background:rgba(255,255,255,0.2);color:#fff;font-size:11px;padding:2px 8px;border-radius:20px;margin-left:8px;border:1px solid rgba(255,255,255,0.4)}
+
+/* セクション共通 */
+.sec{padding:14px 16px;border-bottom:1px solid #eee}
+.sec-label{font-size:11px;color:#888;font-weight:600;letter-spacing:.5px;margin-bottom:10px}
+.step{display:inline-block;background:#1a5c3a;color:#fff;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;margin-right:5px}
+.hidden{display:none}
+
+/* ファイル読込 */
+.file-label{display:block;background:#1a5c3a;color:#fff;text-align:center;padding:14px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;line-height:1.5}
+.file-label:active{background:#134530}
+.file-label small{display:block;font-size:11px;font-weight:400;opacity:.85;margin-top:3px}
+#file-input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.loaded-ok{background:#e8f5e9;border-radius:8px;padding:10px 12px;margin-top:10px;font-size:13px;color:#2e7d32;font-weight:500;border:1px solid #4caf50}
+
+/* 選択 */
+select{width:100%;font-size:15px;padding:10px 12px;border-radius:8px;border:1.5px solid #ddd;background:#fff;color:#222;-webkit-appearance:none;appearance:none}
+select:focus{outline:none;border-color:#1a5c3a}
+
+/* 仕掛品カード */
+.order-card{background:#f1f8f4;border-radius:10px;padding:12px;margin-top:10px;border:1px solid #b2dfca}
+.orow{display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;border-bottom:1px solid #d4ead e}
+.orow:last-child{border-bottom:none}
+.ok{font-size:12px;color:#666;flex-shrink:0;margin-right:8px;padding-top:1px}
+.ov{font-size:13px;font-weight:600;color:#222;text-align:right}
+
+/* 進捗バー */
+.progress-wrap{margin-top:12px}
+.progress-label{display:flex;justify-content:space-between;font-size:12px;color:#555;margin-bottom:5px}
+.progress-bar{background:#e0e0e0;border-radius:20px;height:8px;overflow:hidden}
+.progress-fill{background:#1a5c3a;height:100%;border-radius:20px;transition:width .4s ease}
+
+/* 品目カード（ピッキング中） */
+.item-card{background:#f8fbf9;border-radius:12px;padding:14px;margin-bottom:12px;border:2px solid #1a5c3a}
+.item-title{font-size:13px;font-weight:700;color:#1a5c3a;margin-bottom:8px}
+.item-rows{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.item-row{display:flex;justify-content:space-between;font-size:12px}
+.item-row .lbl{color:#888}
+.item-row .val{font-weight:600;color:#222}
+.item-row .val.lot{color:#555;font-size:11px}
+
+/* ヒント */
+.hint{background:#FFF8E1;border-radius:8px;padding:10px 12px;margin-bottom:12px;border:1px solid #FFD54F}
+.hint p{font-size:12px;color:#5D4037;line-height:1.6}
+.hint strong{color:#E65100}
+
+/* 入力 */
+.input-block{margin-bottom:14px}
+.input-lbl{font-size:13px;color:#444;margin-bottom:6px;font-weight:500;display:flex;align-items:center;gap:6px}
+.input-lbl .badge{font-size:10px;background:#E8F5E9;color:#1a5c3a;padding:2px 7px;border-radius:10px;font-weight:500}
+input[type=text],input[type=number]{width:100%;font-size:18px;padding:13px 14px;border-radius:10px;border:2px solid #ddd;background:#fff;color:#222;-webkit-appearance:none;appearance:none;transition:border-color .2s}
+input[type=text]:focus,input[type=number]:focus{outline:none;border-color:#1a5c3a;background:#f8fbf9}
+input.ok-input{border-color:#4caf50;background:#f0faf0}
+input.ng-input{border-color:#e53935;background:#fff5f5}
+.paste-hint{font-size:11px;color:#888;margin-top:4px;text-align:right}
+
+/* ボタン */
+.check-btn{width:100%;padding:14px;background:#1a5c3a;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;letter-spacing:.5px;-webkit-appearance:none}
+.check-btn:active{background:#134530}
+.check-btn:disabled{background:#aaa;cursor:not-allowed}
+.csv-btn{width:100%;padding:14px;background:#1565C0;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;margin-top:10px;-webkit-appearance:none}
+.csv-btn:active{background:#0d47a1}
+.reset-btn{width:100%;padding:12px;background:#fff;color:#666;border:1.5px solid #ddd;border-radius:10px;font-size:14px;cursor:pointer;margin-top:10px;-webkit-appearance:none}
+
+/* 照合結果カード */
+.rcard{border-radius:10px;padding:12px 14px;margin-bottom:8px;border:1.5px solid}
+.rok{background:#f0faf0;border-color:#4caf50}
+.rng{background:#fff5f5;border-color:#e53935}
+.rtitle{font-size:14px;font-weight:600;margin-bottom:3px}
+.rtitle.ok{color:#2e7d32}
+.rtitle.ng{color:#c62828}
+.rdetail{font-size:12px;color:#666}
+
+/* 完了・NG */
+.final-ok{background:#e8f5e9;border-radius:12px;padding:16px;text-align:center;border:2px solid #4caf50;margin:8px 0}
+.final-ng{background:#ffebee;border-radius:12px;padding:16px;text-align:center;border:2px solid #e53935;margin:8px 0}
+.ft{font-size:17px;font-weight:700;margin-top:4px}
+.fs{font-size:12px;margin-top:4px}
+.ok-c{color:#2e7d32}.ng-c{color:#c62828}
+.ok-s{color:#388e3c}.ng-s{color:#c62828}
+
+/* NG承認パネル */
+.ng-panel{background:#fff3e0;border-radius:10px;padding:14px;border:1.5px solid #ff9800;margin-top:10px}
+.ng-panel-title{font-size:13px;font-weight:700;color:#e65100;margin-bottom:10px}
+.ng-panel label{font-size:12px;color:#555;display:block;margin-bottom:4px;margin-top:10px;font-weight:500}
+.ng-panel input[type=password]{width:100%;font-size:16px;padding:10px 12px;border-radius:8px;border:1.5px solid #ddd;background:#fff;-webkit-appearance:none}
+.ng-panel input[type=password]:focus{outline:none;border-color:#ff9800}
+.ng-panel textarea{width:100%;font-size:14px;padding:10px 12px;border-radius:8px;border:1.5px solid #ddd;background:#fff;resize:none;font-family:inherit}
+.ng-panel textarea:focus{outline:none;border-color:#ff9800}
+.approve-btn{width:100%;padding:12px;background:#e65100;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:10px;-webkit-appearance:none}
+.approve-btn:active{background:#bf360c}
+.approved-badge{display:inline-block;background:#ffccbc;color:#bf360c;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;border:1px solid #ff8a65;margin-left:6px}
+
+/* 全体完了バナー */
+.complete-banner{background:linear-gradient(135deg,#1a5c3a,#2e7d32);border-radius:12px;padding:20px;text-align:center;color:#fff;margin-bottom:10px}
+.complete-banner .icon{font-size:36px;margin-bottom:6px}
+.complete-banner .title{font-size:18px;font-weight:700;margin-bottom:4px}
+.complete-banner .sub{font-size:12px;opacity:.85}
+
+/* 記録リスト */
+.rec-list{margin-top:8px}
+.rec-item{background:#f8fbf9;border-radius:8px;padding:9px 12px;margin-bottom:6px;border:1px solid #c8e6c9;font-size:12px}
+.rec-item.ng-rec{background:#fff5f5;border-color:#ffcdd2}
+.rec-item-head{display:flex;justify-content:space-between;font-weight:600;margin-bottom:2px}
+.rec-tag-ok{color:#2e7d32}
+.rec-tag-ng{color:#c62828}
+.rec-item-sub{color:#888;font-size:11px}
+
+.note{font-size:11px;color:#999;text-align:center;padding:10px 16px 14px;line-height:1.6}
+
+/* 全体進捗バー（トップ固定） */
+.global-progress{background:#e8f5e9;padding:10px 16px;border-bottom:1px solid #c8e6c9}
+.global-progress-label{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#2e7d32;font-weight:600;margin-bottom:5px}
+.global-progress-label .gp-title{font-size:11px;color:#555;font-weight:500}
+.global-progress-bar{background:#c8e6c9;border-radius:20px;height:10px;overflow:hidden}
+.global-progress-fill{background:#1a5c3a;height:100%;border-radius:20px;transition:width .5s ease}
+.gp-chips{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap}
+.gp-chip{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;border:1px solid}
+.gp-chip.done{background:#e8f5e9;color:#2e7d32;border-color:#4caf50}
+.gp-chip.active{background:#1a5c3a;color:#fff;border-color:#1a5c3a}
+.gp-chip.todo{background:#f5f5f5;color:#aaa;border-color:#ddd}
+
+/* 仕掛品完了バナー（1件完了） */
+.shikakuhin-complete-banner{background:linear-gradient(135deg,#1565C0,#1976D2);border-radius:12px;padding:16px;text-align:center;color:#fff;margin-bottom:10px}
+.shikakuhin-complete-banner .icon{font-size:30px;margin-bottom:4px}
+.shikakuhin-complete-banner .title{font-size:16px;font-weight:700;margin-bottom:3px}
+.shikakuhin-complete-banner .sub{font-size:11px;opacity:.85}
+.next-shikakuhin-btn{width:100%;padding:14px;background:#1565C0;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;-webkit-appearance:none;margin-top:6px}
+.next-shikakuhin-btn:active{background:#0d47a1}
+.all-done-banner{background:linear-gradient(135deg,#1a5c3a,#2e7d32);border-radius:12px;padding:20px;text-align:center;color:#fff;margin-bottom:10px}
+.all-done-banner .icon{font-size:40px;margin-bottom:6px}
+.all-done-banner .title{font-size:20px;font-weight:700;margin-bottom:4px}
+.all-done-banner .sub{font-size:12px;opacity:.85;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="screen">
+
+  <!-- トップバー -->
+  <div class="topbar">
+    <h1>📦 資材ピッキングアプリ<span class="rec-badge" id="rec-count">記録 0件</span></h1>
+    <p>指図書照合 ・ ピッキング実績記録</p>
+  </div>
+
+  <!-- 全体進捗バー（ファイル読込後に表示） -->
+  <div class="global-progress hidden" id="global-progress">
+    <div class="global-progress-label">
+      <span class="gp-title">全体進捗</span>
+      <span id="gp-text">0 / 0 仕掛品完了</span>
+      <span id="gp-pct" style="font-size:13px;font-weight:700">0%</span>
+    </div>
+    <div class="global-progress-bar">
+      <div class="global-progress-fill" id="gp-fill" style="width:0%"></div>
+    </div>
+    <div class="gp-chips" id="gp-chips"></div>
+  </div>
+
+  <!-- STEP 0: ファイル読込 -->
+  <div class="sec" id="sec-file">
+    <div class="sec-label">📂 指図書ファイルを読み込む</div>
+    <label class="file-label" for="file-input">
+      ここをタップしてExcelを選ぶ
+      <small>基幹から出力した指図書（.xlsx）を選択</small>
+    </label>
+    <input type="file" id="file-input" accept=".xlsx,.xls" onchange="loadFile(this)">
+    <div id="loaded-info" class="loaded-ok hidden"></div>
+  </div>
+
+  <!-- STEP 1: 仕掛品（製品）選択 -->
+  <div class="sec" id="sec-select">
+    <div class="sec-label"><span class="step">STEP 1</span>仕掛品を選ぶ</div>
+    <select id="sel" onchange="onSelect()">
+      <option value="">― ファイルを読み込むと表示されます ―</option>
+    </select>
+    <div id="ocard" class="order-card hidden">
+      <div class="orow"><span class="ok">仕掛品コード</span><span class="ov" id="o-code"></span></div>
+      <div class="orow"><span class="ok">仕掛品名</span><span class="ov" id="o-name" style="font-size:12px"></span></div>
+      <div class="orow"><span class="ok">資材点数</span><span class="ov" id="o-count" style="color:#1a5c3a"></span></div>
+    </div>
+  </div>
+
+  <!-- STEP 2: ピッキング実行 -->
+  <div class="sec hidden" id="sec-picking">
+    <div class="sec-label"><span class="step">STEP 2</span>ピッキング照合</div>
+
+    <!-- 品目進捗 -->
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="prog-text">1 / ? 品目</span>
+        <span id="prog-pct">0%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+    </div>
+
+    <!-- 現在の品目情報 -->
+    <div class="item-card" id="item-card" style="margin-top:12px">
+      <div class="item-title" id="item-title">品目名</div>
+      <div class="item-rows">
+        <div class="item-row"><span class="lbl">資材コード</span><span class="val" id="item-code">—</span></div>
+        <div class="item-row"><span class="lbl">在庫場所</span><span class="val" id="item-loc">—</span></div>
+        <div class="item-row"><span class="lbl">総合指示数量</span><span class="val" id="item-qty" style="color:#1a5c3a;font-size:15px">—</span></div>
+      </div>
+      <!-- ロット内訳（複数ロット時のみ表示） -->
+      <div id="lot-breakdown" class="hidden" style="margin-top:8px;border-top:1px solid #c8e6c9;padding-top:8px">
+        <div style="font-size:11px;color:#888;margin-bottom:4px;font-weight:600">ロット内訳</div>
+        <div id="lot-breakdown-rows"></div>
+      </div>
+    </div>
+
+    <!-- ロット入力エリア -->
+    <div id="lot-input-area">
+      <!-- ロット進捗（複数ロット時のみ表示） -->
+      <div id="lot-progress-wrap" class="hidden" style="background:#e3f2fd;border-radius:8px;padding:10px 12px;margin-bottom:10px;border:1px solid #90caf9">
+        <div style="font-size:12px;color:#1565C0;font-weight:600;margin-bottom:4px">
+          ロット照合中：<span id="lot-prog-text">1 / 1</span>
+        </div>
+        <div id="lot-accumulated" style="font-size:12px;color:#555"></div>
+      </div>
+
+      <div class="hint">
+        <p>📷 <strong>iPhoneカメラで文字を読み取る方法</strong><br>
+        カメラをラベルにかざす → 文字をタップ長押し → コピー → 下の欄に貼り付け</p>
+      </div>
+
+      <div class="input-block">
+        <div class="input-lbl">🏷 資材コード<span class="badge">コピペOK</span></div>
+        <input type="text" id="in-code" placeholder="ラベルから読取 → 貼り付け"
+          oninput="onInputChange()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        <div class="paste-hint">長押しで「ペースト」をタップ</div>
+      </div>
+
+      <!-- ロットNo入力（記録用） -->
+      <div class="input-block">
+        <div class="input-lbl">🔖 ロットNo<span class="badge">記録用・コピペOK</span></div>
+        <input type="text" id="in-lot" placeholder="現物のロットNoを入力（記録用）"
+          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      </div>
+
+      <div class="input-block">
+        <div class="input-lbl">📦 実ピッキング数量<span class="badge">数値入力</span></div>
+        <input type="number" id="in-qty" placeholder="このロットのピッキング数量"
+          oninput="onInputChange()" inputmode="decimal">
+      </div>
+
+      <!-- ボタンエリア：複数ロット時は「このロットを確定→次のロットへ」も表示 -->
+      <div id="btn-area">
+        <button class="check-btn" id="check-btn" onclick="doCheck()">✅ 照合する</button>
+      </div>
+
+      <!-- 照合結果 -->
+      <div id="check-result" class="hidden" style="margin-top:14px">
+        <div class="rcard" id="r-code"><div class="rtitle" id="rt-code"></div><div class="rdetail" id="rd-code"></div></div>
+        <!-- 個別ロット数量カード -->
+        <div class="rcard" id="r-lot-qty"><div class="rtitle" id="rt-lot-qty"></div><div class="rdetail" id="rd-lot-qty"></div></div>
+        <!-- 総合数量カード（複数ロット時） -->
+        <div class="rcard hidden" id="r-total-qty"><div class="rtitle" id="rt-total-qty"></div><div class="rdetail" id="rd-total-qty"></div></div>
+        <div id="result-final"></div>
+
+        <!-- NG承認パネル -->
+        <div class="ng-panel hidden" id="ng-panel">
+          <div class="ng-panel-title">⚠️ NG承認が必要です — 社員がパスワードを入力してください</div>
+          <label>承認パスワード</label>
+          <input type="password" id="approve-pw" placeholder="パスワードを入力" autocomplete="off">
+          <label>NG理由・コメント</label>
+          <textarea id="approve-reason" rows="2" placeholder="例：数量不足のため上長確認済み"></textarea>
+          <button class="approve-btn" onclick="doApprove()">🔓 承認して次の品目へ進む</button>
+        </div>
+
+        <!-- 次のロットへ or 次の品目へ -->
+        <button class="check-btn hidden" id="next-lot-btn" onclick="goNextLot()"
+          style="margin-top:10px;background:#1565C0">▶ 次のロットを入力する</button>
+        <button class="check-btn hidden" id="next-btn" onclick="goNext()" style="margin-top:10px">▶ 次の品目へ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: 仕掛品完了 / 全完了 -->
+  <div class="sec hidden" id="sec-complete">
+    <!-- 仕掛品1件完了バナー（全完了でない場合） -->
+    <div id="banner-shikakuhin" class="shikakuhin-complete-banner hidden">
+      <div class="icon">✅</div>
+      <div class="title" id="shikakuhin-complete-title">仕掛品ピッキング完了！</div>
+      <div class="sub" id="shikakuhin-complete-sub"></div>
+    </div>
+    <!-- 全仕掛品完了バナー -->
+    <div id="banner-alldone" class="all-done-banner hidden">
+      <div class="icon">🎉</div>
+      <div class="title">全ピッキング完了！</div>
+      <div class="sub" id="alldone-sub"></div>
+    </div>
+
+    <div class="rec-list" id="rec-list"></div>
+
+    <!-- 次の仕掛品へボタン（全完了でない場合のみ表示） -->
+    <button class="next-shikakuhin-btn hidden" id="next-shikakuhin-btn" onclick="goNextShikakuhin()">▶ 次の仕掛品へ</button>
+
+    <button class="csv-btn" onclick="downloadCSV()">📥 ピッキング実績をCSV出力</button>
+    <button class="reset-btn" onclick="resetAll()">🔄 最初からやり直す</button>
+  </div>
+
+  <div class="note">
+    記録はこの画面を閉じるまで保持されます<br>
+    CSVをダウンロードしてExcelで開けます
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+// ================== 定数 ==================
+const APPROVE_PASSWORD = '1234'; // ← 承認パスワードをここで設定
+
+// ================== 状態 ==================
+let groups = [];       // [{code, name, items:[{name,code,totalQty,unit,loc,lots:[{lot,instQty,loc}]}]}]
+let curGroup = null;
+let curGroupIdx = -1;
+let curItemIdx = 0;
+let curLotIdx  = 0;    // 現在のロットインデックス
+let lotActuals = [];   // 現品目の各ロット実績 [{lot,inCode,inQty}]
+let completedGroups = new Set();
+let records = [];
+let currentCheck = null;
+let currentApproved = false;
+
+// ================== Excelコード判定 ==================
+function isShikakuhin(code) {
+  if (!code) return false;
+  const s = String(code).trim();
+  // 末尾 -1
+  if (/\d{5}-1$/.test(s)) return true;
+  // 数字2桁-数字4桁以上（4B始まりは除く）
+  if (/^\d{2}-\d{4,}$/.test(s)) return true;
+  return false;
+}
+
+// ================== Excel読込 ==================
+function loadFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      groups = [];
+      let curG = null;
+      let pendingCode = null;
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const aVal = String(row[0] || '').trim();
+        const bVal = String(row[1] || '').trim();
+        const dVal = String(row[3] || '').trim(); // ロットNo
+        const eVal = String(row[4] || '').trim(); // 総合数量
+        const fVal = String(row[5] || '').trim(); // 総合単位
+        const gVal = String(row[6] || '').trim(); // ロット数量
+        const hVal = String(row[7] || '').trim(); // ロット単位
+        const iVal = String(row[8] || '').trim(); // 在庫場所
+
+        if (bVal && aVal && /^\d+$/.test(aVal)) {
+          // A列が数値 = コード行
+          const lineNo = parseInt(aVal);
+          if (lineNo >= 10 && lineNo < 20 && isShikakuhin(bVal)) {
+            curG = { code: bVal, name: '', items: [] };
+            groups.push(curG);
+            pendingCode = bVal; // 仕掛品名取得用
+          } else if (lineNo >= 20 && curG) {
+            pendingCode = bVal; // 資材コード
+          }
+        } else if (aVal && !bVal && curG) {
+          // 名称行
+          const name = aVal;
+          const totalQty = parseFloat(eVal.replace(/,/g,'')) || 0;
+          const lotQty   = parseFloat(gVal.replace(/,/g,'')) || 0;
+          const unit     = fVal || hVal || '';
+
+          if (!curG.name && pendingCode && isShikakuhin(pendingCode)) {
+            // 仕掛品名
+            curG.name = name;
+            pendingCode = null;
+          } else if (pendingCode && !isShikakuhin(pendingCode)) {
+            // 資材の名称行 → 1品目として追加（lotsに最初のロットを格納）
+            const item = {
+              name, code: pendingCode,
+              totalQty, unit,
+              loc: iVal,
+              lots: lotQty > 0 ? [{ lot: dVal, instQty: lotQty, loc: iVal }] : []
+            };
+            // lotsが空（ロット分けなし）の場合は総合数量をそのまま使う
+            if (item.lots.length === 0) {
+              item.lots = [{ lot: dVal, instQty: totalQty, loc: iVal }];
+            }
+            curG.items.push(item);
+            pendingCode = null;
+          }
+        } else if (!aVal && !bVal && curG && curG.items.length > 0) {
+          // ロット継続行（A・B列空、D列にロット、G列に数量）
+          const lotQty = parseFloat(gVal.replace(/,/g,'')) || 0;
+          if (dVal && lotQty > 0) {
+            const lastItem = curG.items[curG.items.length - 1];
+            lastItem.lots.push({ lot: dVal, instQty: lotQty, loc: iVal || lastItem.loc });
+          }
+        }
+      }
+
+      // 仕掛品名が取れなかった場合はコードで代用、資材なしは除外
+      groups.forEach(g => { if (!g.name) g.name = g.code; });
+      groups = groups.filter(g => g.items.length > 0);
+
+      // セレクトボックス更新
+      const sel = document.getElementById('sel');
+      sel.innerHTML = '<option value="">― 仕掛品を選択してください ―</option>';
+      groups.forEach((g, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = g.code + '　' + g.name.slice(0, 18) + (g.name.length > 18 ? '…' : '');
+        sel.appendChild(opt);
+      });
+
+      const info = document.getElementById('loaded-info');
+      info.textContent = '✅ ' + file.name + '　仕掛品 ' + groups.length + '件 読み込み完了';
+      info.classList.remove('hidden');
+
+      curGroup = null; curGroupIdx = -1; completedGroups = new Set(); sel.value = '';
+      document.getElementById('ocard').classList.add('hidden');
+      document.getElementById('sec-picking').classList.add('hidden');
+      document.getElementById('sec-complete').classList.add('hidden');
+      initGlobalProgress();
+    } catch(err) {
+      alert('読み込みエラー：' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ================== 仕掛品選択 ==================
+function onSelect() {
+  const v = document.getElementById('sel').value;
+  document.getElementById('ocard').classList.add('hidden');
+  document.getElementById('sec-picking').classList.add('hidden');
+  document.getElementById('sec-complete').classList.add('hidden');
+  if (v === '') { curGroup = null; curGroupIdx = -1; return; }
+
+  curGroupIdx = parseInt(v);
+  curGroup = groups[curGroupIdx];
+  curItemIdx = 0;
+
+  document.getElementById('o-code').textContent = curGroup.code;
+  document.getElementById('o-name').textContent = curGroup.name;
+  document.getElementById('o-count').textContent = curGroup.items.length + ' 品目';
+  document.getElementById('ocard').classList.remove('hidden');
+
+  updateGlobalProgress(); // チップ表示更新（進行中を反映）
+
+  // ピッキング画面初期化
+  resetPickingUI();
+  loadItem(0);
+  document.getElementById('sec-picking').classList.remove('hidden');
+  document.getElementById('sec-picking').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ================== 品目表示 ==================
+function loadItem(idx) {
+  const item  = curGroup.items[idx];
+  const total = curGroup.items.length;
+  curLotIdx   = 0;
+  lotActuals  = [];
+
+  const pct = Math.round((idx / total) * 100);
+  document.getElementById('prog-text').textContent = (idx + 1) + ' / ' + total + ' 品目';
+  document.getElementById('prog-pct').textContent  = pct + '%';
+  document.getElementById('prog-fill').style.width = pct + '%';
+
+  document.getElementById('item-title').textContent = item.name;
+  document.getElementById('item-code').textContent  = item.code;
+  document.getElementById('item-loc').textContent   = item.loc || '—';
+  document.getElementById('item-qty').textContent   = item.totalQty.toLocaleString() + ' ' + item.unit;
+
+  // ロット内訳
+  const breakdown = document.getElementById('lot-breakdown');
+  const brows     = document.getElementById('lot-breakdown-rows');
+  if (item.lots.length > 1) {
+    brows.innerHTML = item.lots.map((l,i) =>
+      `<div class="item-row" id="lot-row-${i}">
+        <span class="lbl">${l.lot ? 'ロット '+l.lot : 'ロット'+(i+1)}</span>
+        <span class="val lot">${l.instQty.toLocaleString()} ${item.unit}</span>
+      </div>`).join('');
+    breakdown.classList.remove('hidden');
+    document.getElementById('lot-progress-wrap').classList.remove('hidden');
+    updateLotProgress(item);
+  } else {
+    brows.innerHTML = '';
+    breakdown.classList.add('hidden');
+    document.getElementById('lot-progress-wrap').classList.add('hidden');
+  }
+
+  resetLotInput();
+  currentCheck = null;
+  currentApproved = false;
+}
+
+function updateLotProgress(item) {
+  const lot = item.lots[curLotIdx];
+  document.getElementById('lot-prog-text').textContent =
+    (curLotIdx + 1) + ' / ' + item.lots.length + ' ロット　指示: ' + lot.instQty.toLocaleString() + ' ' + item.unit;
+  const acc = lotActuals.reduce((s,a) => s + a.inQty, 0);
+  document.getElementById('lot-accumulated').textContent = lotActuals.length > 0
+    ? '累計実績: ' + acc.toLocaleString() + ' ' + item.unit + '　（総合指示: ' + item.totalQty.toLocaleString() + ' ' + item.unit + '）' : '';
+  item.lots.forEach((_,i) => {
+    const row = document.getElementById('lot-row-' + i);
+    if (!row) return;
+    const v = row.querySelector('.val');
+    if (i < curLotIdx) { row.style.opacity='.45'; if(v){v.style.textDecoration='line-through';v.style.color='#888';} }
+    else if (i === curLotIdx) { row.style.opacity='1'; row.style.fontWeight='700'; if(v){v.style.textDecoration='';v.style.color='#1565C0';} }
+    else { row.style.opacity='.45'; if(v){v.style.textDecoration='';v.style.color='';} }
+  });
+}
+
+function resetLotInput() {
+  document.getElementById('in-lot').value   = '';
+  document.getElementById('in-code').value  = '';
+  document.getElementById('in-qty').value   = '';
+  document.getElementById('in-code').className = '';
+  document.getElementById('in-qty').className  = '';
+  document.getElementById('check-result').classList.add('hidden');
+  document.getElementById('ng-panel').classList.add('hidden');
+  document.getElementById('next-lot-btn').classList.add('hidden');
+  document.getElementById('next-btn').classList.add('hidden');
+  document.getElementById('check-btn').classList.remove('hidden');
+}
+
+// ================== 入力変化 ==================
+function onInputChange() {
+  const el = document.getElementById('in-code');
+  const v = el.value.replace(/[\s\u3000]/g, '');
+  if (el.value !== v) el.value = v;
+  document.getElementById('check-result').classList.add('hidden');
+}
+
+// ================== 照合 ==================
+function doCheck() {
+  if (!curGroup) return;
+  const item   = curGroup.items[curItemIdx];
+  const lot    = item.lots[curLotIdx];
+  const inLot  = document.getElementById('in-lot').value.trim();
+  const inCode = document.getElementById('in-code').value.trim();
+  const inQty  = parseFloat(document.getElementById('in-qty').value) || 0;
+  const isMultiLot = item.lots.length > 1;
+
+  const codeOk = inCode === item.code;
+  document.getElementById('in-code').className = codeOk ? 'ok-input' : 'ng-input';
+  setCard('r-code','rt-code','rd-code', codeOk, '資材コード照合',
+    codeOk ? '一致：' + item.code : '指図書: ' + item.code + '　入力: ' + (inCode || '未入力'));
+
+  const lotInstQty = lot.instQty;
+  const lotQtyOk   = inQty >= lotInstQty;
+  document.getElementById('in-qty').className = lotQtyOk ? 'ok-input' : 'ng-input';
+  document.getElementById('r-lot-qty').classList.remove('hidden');
+  setCard('r-lot-qty','rt-lot-qty','rd-lot-qty', lotQtyOk,
+    isMultiLot ? `ロット数量（${curLotIdx+1}/${item.lots.length}）` : '数量照合',
+    `指示: ${lotInstQty.toLocaleString()} ${item.unit}　実績: ${inQty.toLocaleString()} ${item.unit}　${lotQtyOk?'（OK）':'（不足）'}`);
+
+  const prevAcc  = lotActuals.reduce((s,a) => s + a.inQty, 0);
+  const totalAcc = prevAcc + inQty;
+  const totalOk  = totalAcc >= item.totalQty;
+  const rTotalQty = document.getElementById('r-total-qty');
+  if (isMultiLot) {
+    rTotalQty.classList.remove('hidden');
+    setCard('r-total-qty','rt-total-qty','rd-total-qty', totalOk, '総合数量照合',
+      `総合指示: ${item.totalQty.toLocaleString()} ${item.unit}　累計実績: ${totalAcc.toLocaleString()} ${item.unit}　${totalOk?'（OK）':'（まだ不足）'}`);
+  } else { rTotalQty.classList.add('hidden'); }
+
+  const isLastLot = curLotIdx >= item.lots.length - 1;
+  const ngReasons = [];
+  if (!codeOk) ngReasons.push('資材コード不一致');
+
+  let finalJudge = null;
+  if (isLastLot) {
+    if (!codeOk || !totalOk) { if(!totalOk) ngReasons.push('数量不足（指示より少ない）'); finalJudge = false; }
+    else finalJudge = true;
+  } else {
+    if (!codeOk) finalJudge = false;
+  }
+
+  if (finalJudge === true) {
+    document.getElementById('result-final').innerHTML =
+      '<div class="final-ok"><div style="font-size:28px">✅</div><div class="ft ok-c">総合　OK</div><div class="fs ok-s">コード・総合数量ともに一致</div></div>';
+  } else if (finalJudge === false) {
+    document.getElementById('result-final').innerHTML =
+      '<div class="final-ng"><div style="font-size:28px">⚠️</div><div class="ft ng-c">NG — 承認が必要です</div><div class="fs ng-s">'+ngReasons.join('　')+'</div></div>';
+  } else {
+    const remaining = item.totalQty - totalAcc;
+    document.getElementById('result-final').innerHTML =
+      `<div class="final-ok" style="border-color:#90caf9;background:#e3f2fd">
+        <div style="font-size:22px">🔵</div>
+        <div class="ft" style="color:#1565C0">次のロットへ進んでください</div>
+        <div class="fs" style="color:#1976D2">累計: ${totalAcc.toLocaleString()} ${item.unit}　残り指示: ${Math.max(0,remaining).toLocaleString()} ${item.unit}</div>
+      </div>`;
+  }
+
+  currentCheck = { item, lot, inLot, inCode, inQty, codeOk, lotQtyOk, totalAcc, totalOk, ngReasons, finalJudge, isLastLot };
+  currentApproved = false;
+  document.getElementById('check-result').classList.remove('hidden');
+  document.getElementById('check-btn').classList.add('hidden');
+
+  if (finalJudge === false) {
+    document.getElementById('ng-panel').classList.remove('hidden');
+    document.getElementById('next-lot-btn').classList.add('hidden');
+    document.getElementById('next-btn').classList.add('hidden');
+    document.getElementById('approve-pw').value = '';
+    document.getElementById('approve-reason').value = '';
+  } else if (finalJudge === true) {
+    document.getElementById('ng-panel').classList.add('hidden');
+    document.getElementById('next-lot-btn').classList.add('hidden');
+    document.getElementById('next-btn').classList.remove('hidden');
+  } else {
+    document.getElementById('ng-panel').classList.add('hidden');
+    document.getElementById('next-lot-btn').classList.remove('hidden');
+    document.getElementById('next-btn').classList.add('hidden');
+  }
+  document.getElementById('check-result').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ================== NG承認 ==================
+function doApprove() {
+  const pw     = document.getElementById('approve-pw').value;
+  const reason = document.getElementById('approve-reason').value.trim();
+  if (pw !== APPROVE_PASSWORD) {
+    alert('パスワードが違います。');
+    document.getElementById('approve-pw').value = '';
+    document.getElementById('approve-pw').focus();
+    return;
+  }
+  if (!reason) {
+    alert('NG理由・コメントを入力してください。');
+    document.getElementById('approve-reason').focus();
+    return;
+  }
+  currentApproved = true;
+  currentCheck.approveReason = reason;
+  currentCheck.approveTime   = nowStr();
+  document.getElementById('ng-panel').classList.add('hidden');
+  document.getElementById('result-final').innerHTML =
+    '<div class="final-ng" style="border-color:#ff9800;background:#fff3e0">' +
+    '<div style="font-size:28px">🔓</div><div class="ft" style="color:#e65100">NG — 承認済み</div>' +
+    '<div class="fs" style="color:#bf360c">理由: ' + escHtml(reason) + '</div></div>';
+  document.getElementById('next-btn').classList.remove('hidden');
+  document.getElementById('next-btn').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ================== 次のロットへ ==================
+function goNextLot() {
+  if (!currentCheck) return;
+  const { inLot, inCode, inQty, item } = currentCheck;
+  lotActuals.push({ lot: inLot || item.lots[curLotIdx].lot, inCode, inQty });
+  curLotIdx++;
+  updateLotProgress(item);
+  resetLotInput();
+  document.getElementById('sec-picking').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ================== 次の品目へ ==================
+function goNext() {
+  if (!currentCheck) return;
+  const { item, inLot, inCode, inQty, ngReasons } = currentCheck;
+  lotActuals.push({ lot: inLot || item.lots[curLotIdx].lot, inCode, inQty });
+  const totalAcc = lotActuals.reduce((s,a) => s + a.inQty, 0);
+  const result   = currentApproved ? 'NG' : 'OK';
+
+  lotActuals.forEach((a, i) => {
+    records.push({
+      datetime:       nowStr(),
+      shikakuhinCode: curGroup.code,
+      shikakuhinName: curGroup.name,
+      itemName:       item.name,
+      itemCode:       item.code,
+      lot:            a.lot || '',
+      loc:            (item.lots[i] ? item.lots[i].loc : '') || item.loc || '',
+      instQty:        item.lots[i] ? item.lots[i].instQty : item.totalQty,
+      unit:           item.unit,
+      actualQty:      a.inQty,
+      totalInstQty:   item.totalQty,
+      totalActualQty: totalAcc,
+      result:         i === lotActuals.length - 1 ? result : '（中間）',
+      ngReason:       i === lotActuals.length - 1 ? ngReasons.join('／') : '',
+      approveReason:  i === lotActuals.length - 1 ? (currentCheck.approveReason || '') : '',
+      approveTime:    i === lotActuals.length - 1 ? (currentCheck.approveTime   || '') : ''
+    });
+  });
+
+  updateBadge();
+  curItemIdx++;
+  if (curItemIdx >= curGroup.items.length) { showComplete(); }
+  else { loadItem(curItemIdx); document.getElementById('sec-picking').scrollIntoView({ behavior: 'smooth' }); }
+}
+
+// ================== resetPickingUI ==================
+function resetPickingUI() {
+  curLotIdx = 0; lotActuals = [];
+  currentCheck = null; currentApproved = false;
+  document.getElementById('check-result').classList.add('hidden');
+  document.getElementById('ng-panel').classList.add('hidden');
+  document.getElementById('next-btn').classList.add('hidden');
+  document.getElementById('next-lot-btn').classList.add('hidden');
+  document.getElementById('check-btn').classList.remove('hidden');
+  document.getElementById('in-lot').value   = '';
+  document.getElementById('in-code').value  = '';
+  document.getElementById('in-qty').value   = '';
+  document.getElementById('in-code').className = '';
+  document.getElementById('in-qty').className  = '';
+}
+
+// ================== 仕掛品完了表示 ==================
+function showComplete() {
+  completedGroups.add(curGroupIdx);
+  updateGlobalProgress();
+
+  document.getElementById('sec-picking').classList.add('hidden');
+  document.getElementById('sec-complete').classList.remove('hidden');
+
+  const okCount = records.filter(r => r.shikakuhinCode === curGroup.code && r.result === 'OK').length;
+  const ngCount = records.filter(r => r.shikakuhinCode === curGroup.code && r.result === 'NG').length;
+
+  const isAllDone = completedGroups.size >= groups.length;
+
+  // バナー切り替え
+  document.getElementById('banner-shikakuhin').classList.toggle('hidden', isAllDone);
+  document.getElementById('banner-alldone').classList.toggle('hidden', !isAllDone);
+  document.getElementById('next-shikakuhin-btn').classList.toggle('hidden', isAllDone);
+
+  if (isAllDone) {
+    const totalOk = records.filter(r => r.result === 'OK').length;
+    const totalNg = records.filter(r => r.result === 'NG').length;
+    document.getElementById('alldone-sub').innerHTML =
+      '全 ' + groups.length + ' 仕掛品 ／ ' + records.length + ' 品目完了<br>OK: ' + totalOk + '　NG承認: ' + totalNg;
+  } else {
+    document.getElementById('shikakuhin-complete-title').textContent = curGroup.name + ' 完了！';
+    document.getElementById('shikakuhin-complete-sub').textContent =
+      '全' + curGroup.items.length + '品目　OK:' + okCount + '　NG承認:' + ngCount;
+    // 次の仕掛品を探す（未完了の先頭）
+    const nextIdx = groups.findIndex((_, i) => !completedGroups.has(i));
+    if (nextIdx !== -1) {
+      document.getElementById('next-shikakuhin-btn').textContent =
+        '▶ 次の仕掛品へ（' + groups[nextIdx].name.slice(0, 15) + (groups[nextIdx].name.length > 15 ? '…' : '') + '）';
+    }
+  }
+
+  // 当該仕掛品の記録リスト
+  const list = document.getElementById('rec-list');
+  list.innerHTML = '';
+  const myRecs = records.filter(r => r.shikakuhinCode === curGroup.code);
+  myRecs.forEach(r => {
+    const div = document.createElement('div');
+    div.className = 'rec-item' + (r.result === 'NG' ? ' ng-rec' : '');
+    div.innerHTML =
+      '<div class="rec-item-head">' +
+        '<span>' + escHtml(r.itemName) + '</span>' +
+        '<span class="' + (r.result === 'OK' ? 'rec-tag-ok' : 'rec-tag-ng') + '">' + r.result + (r.result === 'NG' ? ' 承認済' : '') + '</span>' +
+      '</div>' +
+      '<div class="rec-item-sub">' + escHtml(r.itemCode) + '　' + r.actualQty.toLocaleString() + r.unit +
+        (r.lot ? '　ロット:' + r.lot : '') + (r.loc ? '　📍' + r.loc : '') + '</div>';
+    if (r.result === 'NG') {
+      const ng = document.createElement('div');
+      ng.className = 'rec-item-sub'; ng.style.color = '#c62828';
+      ng.textContent = 'NG理由: ' + r.ngReason + '　コメント: ' + r.approveReason;
+      div.appendChild(ng);
+    }
+    list.appendChild(div);
+  });
+
+  document.getElementById('sec-complete').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ================== 次の仕掛品へ ==================
+function goNextShikakuhin() {
+  const nextIdx = groups.findIndex((_, i) => !completedGroups.has(i));
+  if (nextIdx === -1) return;
+
+  curGroupIdx = nextIdx;
+  curGroup = groups[nextIdx];
+  curItemIdx = 0;
+
+  // STEP1セレクトも同期
+  document.getElementById('sel').value = String(nextIdx);
+  document.getElementById('o-code').textContent = curGroup.code;
+  document.getElementById('o-name').textContent = curGroup.name;
+  document.getElementById('o-count').textContent = curGroup.items.length + ' 品目';
+  document.getElementById('ocard').classList.remove('hidden');
+
+  document.getElementById('sec-complete').classList.add('hidden');
+  resetPickingUI();
+  loadItem(0);
+  document.getElementById('sec-picking').classList.remove('hidden');
+  document.getElementById('sec-picking').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ================== ユーティリティ ==================
+function setCard(cardId, rtId, rdId, ok, label, detail) {
+  document.getElementById(cardId).className = 'rcard ' + (ok ? 'rok' : 'rng');
+  const rt = document.getElementById(rtId);
+  rt.className = 'rtitle ' + (ok ? 'ok' : 'ng');
+  rt.textContent = (ok ? '✅ ' : '❌ ') + label;
+  document.getElementById(rdId).textContent = detail;
+}
+
+function resetPickingUI() {
+  document.getElementById('check-result').classList.add('hidden');
+  document.getElementById('ng-panel').classList.add('hidden');
+  document.getElementById('next-btn').classList.add('hidden');
+  document.getElementById('in-code').value = '';
+  document.getElementById('in-qty').value = '';
+  document.getElementById('in-code').className = '';
+  document.getElementById('in-qty').className = '';
+  currentCheck = null;
+  currentApproved = false;
+}
+
+function updateBadge() {
+  document.getElementById('rec-count').textContent = '記録 ' + records.length + '件';
+}
+
+function nowStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' +
+         pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+}
+function pad(n) { return String(n).padStart(2,'0'); }
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ================== CSV出力 ==================
+function downloadCSV() {
+  if (records.length === 0) {
+    alert('まだ記録がありません。');
+    return;
+  }
+  const header = ['完了時刻','仕掛品コード','仕掛品名','資材コード','資材名','ロットNo（実績）','在庫場所','ロット指示数量','単位','ロット実績数量','総合指示数量','総合実績数量','結果','NG理由','承認コメント','承認時刻'];
+  const rows = records.map(r => [
+    r.datetime, r.shikakuhinCode, r.shikakuhinName,
+    r.itemCode, r.itemName, r.lot, r.loc,
+    r.instQty, r.unit, r.actualQty,
+    r.totalInstQty, r.totalActualQty,
+    r.result, r.ngReason, r.approveReason, r.approveTime
+  ]);
+
+  let csv = '\uFEFF' + header.join(',') + '\n';
+  rows.forEach(row => {
+    csv += row.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',') + '\n';
+  });
+
+  const d = new Date();
+  const filename = 'ピッキング実績_' + d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + '.csv';
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ================== 全体進捗 ==================
+function initGlobalProgress() {
+  document.getElementById('global-progress').classList.remove('hidden');
+  updateGlobalProgress();
+}
+
+function updateGlobalProgress() {
+  const total = groups.length;
+  const done  = completedGroups.size;
+  const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  document.getElementById('gp-text').textContent = done + ' / ' + total + ' 仕掛品完了';
+  document.getElementById('gp-pct').textContent  = pct + '%';
+  document.getElementById('gp-fill').style.width = pct + '%';
+
+  // チップ表示
+  const chips = document.getElementById('gp-chips');
+  chips.innerHTML = '';
+  groups.forEach((g, i) => {
+    const chip = document.createElement('span');
+    const isDone   = completedGroups.has(i);
+    const isActive = i === curGroupIdx && !isDone;
+    chip.className = 'gp-chip ' + (isDone ? 'done' : isActive ? 'active' : 'todo');
+    chip.textContent = (isDone ? '✓ ' : isActive ? '▶ ' : '') + g.name.slice(0, 10) + (g.name.length > 10 ? '…' : '');
+    chips.appendChild(chip);
+  });
+}
+
+// ================== リセット ==================
+function resetAll() {
+  curGroup = null; curGroupIdx = -1; curItemIdx = 0;
+  completedGroups = new Set();
+  currentCheck = null; currentApproved = false;
+  document.getElementById('sel').value = '';
+  document.getElementById('ocard').classList.add('hidden');
+  document.getElementById('sec-picking').classList.add('hidden');
+  document.getElementById('sec-complete').classList.add('hidden');
+  if (groups.length > 0) updateGlobalProgress();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
